@@ -1,26 +1,15 @@
-# LostInVirtual | Citizen Registry System
+# LostInVirtual | Citizen Registry
 
-**"The digital frontier's premier citizen registry. Secure, Sovereign, Scalable."**
-
-## Overview
-LostInVirtual is an industrial-grade, agile citizen registry ecosystem. Designed to be the foundation of a digital society, this system leverages a monorepo architecture for maximum maintainability and rapid iteration.
+The digital frontier's premier citizen registry. Sovereign. Secure. Scalable.
 
 ## Architecture
-- **Framework:** Next.js 16+ (React 19)
-- **Language:** TypeScript
-- **Deployment:** Docker-based (Portainer Orchestration)
-- **Workflow:** Industrial Agile CI/CD
+- **Monorepo**: Next.js 16 (App), Shared Packages, Dockerized Environment.
+- **Philosophy**: Agile, Production-Ready, Security-First.
 
-## Branching Strategy
-- `main`: Production-ready code.
-- `staging`: Integration environment for testing.
-- `feature/*`: Development branches for new capabilities.
+## Workflow
+- **main**: Production (Live)
+- **develop**: Staging (Testing)
+- **feature/***: Development
 
-## Infrastructure Monitoring
-| Branch | Environment | Host Address | Port |
-| :--- | :--- | :--- | :--- |
-| `main` | Production | 43.133.55.157 | 3001 |
-| `staging` | Staging | 43.133.55.157 | 3002 |
-
----
-*Built with Hermes Agent.*
+## Deployment
+Automated via GitHub Actions. Every push triggers a rolling deployment to the VPS.
