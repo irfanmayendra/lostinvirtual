@@ -2,21 +2,31 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [ main, develop ]
+    branches:
+      - main
+      - staging
+      - dev
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /opt/data/lostinvirtual
-            git pull origin ${{ github.ref_name }}
-            # Logic deploy akan disesuaikan dengan environment per branch
-            ./scripts/deploy.sh ${{ github.ref_name }}
+      
+      - name: Deploy based on branch
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            export PORT=3001
+            export ENV=prod
+          elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
+            export PORT=3002
+            export ENV=staging
+          else
+            export PORT=3003
+            export ENV=dev
+          fi
+          
+          # Use docker-compose with specific profile/env
+          docker compose -p lostinvirtual-$ENV up -d --build
+          
+          echo "Deployed to port $PORT (Environment: $ENV)"
