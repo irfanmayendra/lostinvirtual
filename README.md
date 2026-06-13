@@ -1,19 +1,11 @@
 # LostInVirtual | Citizen Registry
 
-The official citizen registry ecosystem for the LostInVirtual world.
+The official citizen registry system for the LostInVirtual ecosystem.
 
-## 🚀 Workflow
-- `main`: Production-ready code.
-- `staging`: Pre-production testing.
-- `develop`: Main development branch for features.
-- `feature/*`: Work-in-progress features.
+## Branching Strategy
+- **main**: Production-ready, stable code. Deployed to production VPS.
+- **staging**: Pre-release testing. Deployed to staging VPS.
+- **dev**: Active development. Deployed for integration testing.
 
-## 🛠 Tech Stack
-- Next.js 16 (React 19)
-- TypeScript
-- Docker-based Deployment
-
-## 📦 Setup
-1. Clone the repo.
-2. Setup environment variables (`.env`).
-3. Run `docker-compose up -d`.
+## Workflow
+All branches trigger automatic deployment via GitHub Actions to the VPS.
