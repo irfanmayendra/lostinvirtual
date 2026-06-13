@@ -1,0 +1,13 @@
+{
+  "name": "@liv/database",
+  "version": "0.1.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "devDependencies": {
+    "drizzle-kit": "latest"
+  },
+  "dependencies": {
+    "drizzle-orm": "latest",
+    "pg": "latest"
+  }
+}
