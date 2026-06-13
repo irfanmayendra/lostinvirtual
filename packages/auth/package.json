@@ -1,0 +1,8 @@
+{
+  "name": "@lostinvirtual/auth",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "dependencies": {
+    "jose": "^5.0.0"
+  }
+}
