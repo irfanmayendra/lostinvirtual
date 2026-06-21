@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Citizen {
+  id              String   @id @default(uuid())
+  keycloakId      String   @unique @map("keycloak_id")
+  livId           String   @unique @map("liv_id")
+  email           String   @unique
+  username        String   @unique
+  nickname        String?
+  bio             String?
+  avatarUrl       String?  @map("avatar_url")
+  tier            String   @default("CITIZEN")
+  status          String   @default("PENDING")
+  countryId       String?  @map("country_id")
+  provinceId      String?  @map("province_id")
+  cityId          String?  @map("city_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  country         Country? @relation(fields: [countryId], references: [id])
+  province        Province? @relation(fields: [provinceId], references: [id])
+  city            City?     @relation(fields: [cityId], references: [id])
+  activationCodes ActivationCode[]
+  cards           Card[]
+  auditLogs       AuditLog[]
+
+  @@map("citizens")
+}
+
+model ActivationCode {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  type            String
+  status          String    @default("AVAILABLE")
+  assignedCitizenId String? @map("assigned_citizen_id")
+  activatedAt     DateTime? @map("activated_at")
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  citizen         Citizen?  @relation(fields: [assignedCitizenId], references: [id])
+
+  @@map("activation_codes")
+}
+
+model Country {
+  id         String     @id @default(uuid())
+  name       String
+  code       String
+  provinces  Province[]
+  citizens   Citizen[]
+
+  @@map("countries")
+}
+
+model Province {
+  id        String    @id @default(uuid())
+  countryId String    @map("country_id")
+  name      String
+  cities    City[]
+  country   Country   @relation(fields: [countryId], references: [id])
+  citizens  Citizen[]
+
+  @@map("provinces")
+}
+
+model City {
+  id         String    @id @default(uuid())
+  provinceId String    @map("province_id")
+  name       String
+  province   Province  @relation(fields: [provinceId], references: [id])
+  citizens   Citizen[]
+
+  @@map("cities")
+}
+
+model Card {
+  id           String   @id @default(uuid())
+  citizenId    String   @map("citizen_id")
+  cardUrl      String   @map("card_url")
+  generatedAt  DateTime @default(now()) @map("generated_at")
+  citizen      Citizen  @relation(fields: [citizenId], references: [id])
+
+  @@map("cards")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  citizenId String?  @map("citizen_id")
+  action    String
+  payload   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  citizen   Citizen? @relation(fields: [citizenId], references: [id])
+
+  @@map("audit_logs")
+}

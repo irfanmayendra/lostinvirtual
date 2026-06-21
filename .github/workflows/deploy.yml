@@ -7,5 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm install
+      - name: Lint
+        run: npm run lint
       - name: Build
-        run: echo "Building for ${{ github.ref_name }}..."
+        run: npm run build
