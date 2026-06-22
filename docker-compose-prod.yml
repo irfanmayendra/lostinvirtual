@@ -1,0 +1,9 @@
+services:
+  app-prod:
+    image: lostinvirtual-dev:latest
+    container_name: lostinvirtual-app-prod
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=production
+    restart: always

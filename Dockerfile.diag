@@ -1,0 +1,6 @@
+FROM node:20-alpine AS base
+WORKDIR /app
+COPY . .
+# Diagnostic: List structure to understand layout
+RUN ls -R /app > /app/structure.txt || true
+CMD ["cat", "/app/structure.txt"]

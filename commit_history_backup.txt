@@ -1,0 +1,5 @@
+* 87620f00 chore: ignore node_modules and remove from tracking
+* 49ecac13 feat: add CI/CD pipeline for docker publishing
+* 65b0457f feat: setup docker build and ci/cd pipeline for multi-env
+* 77d336a3 infra: setup dev and prod stacks
+* db028d30 Update environment configurations in apps/web/
