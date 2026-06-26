@@ -23,7 +23,8 @@ services:
       KC_DB_PASSWORD: password123
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: irfan99
-      KC_HOSTNAME: keycloak.lostinvirtual.world
+      KC_HOSTNAME: 43.133.55.157
+      KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
     ports:
       - "8081:8080"

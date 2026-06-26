@@ -1,7 +1,90 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-body {
-  @apply bg-black text-white selection:bg-blue-500/30;
+/* === Cyberpunk Design Tokens === */
+@theme {
+  --color-cyber-bg: #0a0a0f;
+  --color-cyber-surface: #12121a;
+  --color-cyber-border: #1e1e2e;
+  --color-cyber-cyan: #00f0ff;
+  --color-cyber-purple: #b829f0;
+  --color-cyber-magenta: #ff2d78;
+  --color-cyber-green: #39ff14;
+  --color-cyber-yellow: #ffe400;
+  --color-cyber-text: #e0e0e8;
+  --color-cyber-muted: #6b6b80;
+  --color-cyber-card: #16161f;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
+
+/* === Base === */
+body {
+  @apply bg-cyber-bg text-cyber-text selection:bg-cyber-cyan/30;
+  font-family: var(--font-mono);
+}
+
+/* === Glow Utilities === */
+.glow-cyan {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3), 0 0 40px rgba(0, 240, 255, 0.1);
+}
+.glow-purple {
+  box-shadow: 0 0 15px rgba(184, 41, 240, 0.3), 0 0 40px rgba(184, 41, 240, 0.1);
+}
+.glow-green {
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.3), 0 0 40px rgba(57, 255, 20, 0.1);
+}
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+.text-glow-purple {
+  text-shadow: 0 0 10px rgba(184, 41, 240, 0.5);
+}
+
+/* === Scanline overlay === */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* === Animations === */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.8; }
+  94% { opacity: 1; }
+  96% { opacity: 0.9; }
+  97% { opacity: 1; }
+}
+@keyframes border-pulse {
+  0%, 100% { border-color: rgba(0, 240, 255, 0.3); }
+  50% { border-color: rgba(0, 240, 255, 0.6); }
+}
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-flicker { animation: flicker 4s linear infinite; }
+.animate-border-pulse { animation: border-pulse 2s ease-in-out infinite; }
+.animate-gradient { animation: gradient-shift 3s ease infinite; background-size: 200% 200%; }
+
+/* === Tier Badge Colors === */
+.tier-common { @apply bg-gray-600 text-gray-200; }
+.tier-rare { @apply bg-blue-600 text-blue-100; }
+.tier-epic { @apply bg-purple-600 text-purple-100; }
+.tier-legendary { @apply bg-gradient-to-r from-yellow-500 to-orange-500 text-black; }
