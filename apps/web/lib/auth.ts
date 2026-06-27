@@ -47,30 +47,12 @@ export const authOptions: NextAuthOptions = {
               email: user.email || "",
               displayName: user.name || null,
               avatarUrl: user.image || null,
-              role: "VIEWER",
+              role: "VISITOR",
               lastLoginAt: new Date(),
             },
           });
 
-          // Log login event
-          const dbUser = await prisma.user.findUnique({
-            where: { keycloakId: profile.sub },
-          });
-
-          if (dbUser) {
-            await prisma.auditLog.create({
-              data: {
-                userId: dbUser.id,
-                action: "LOGIN",
-                resourceType: "user",
-                resourceId: dbUser.id,
-                details: {
-                  provider: "keycloak",
-                  method: "oidc",
-                },
-              },
-            });
-          }
+          // User synced to DB
         }
         return true;
       } catch (error) {

@@ -18,17 +18,17 @@ export default async function handler(
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    // Get user from DB
     const user = await prisma.user.findUnique({
       where: {
         keycloakId: (session as any).keycloakId,
       },
       include: {
-        _count: {
-          select: {
-            projects: true,
-            deployments: true,
-            auditLogs: true,
+        citizen: {
+          include: {
+            region: true,
+            achievements: {
+              include: { achievement: true },
+            },
           },
         },
       },
@@ -46,10 +46,9 @@ export default async function handler(
         displayName: user.displayName,
         role: user.role,
         avatarUrl: user.avatarUrl,
-        preferences: user.preferences,
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt,
-        stats: user._count,
+        citizen: user.citizen,
       },
     });
   } catch (error) {

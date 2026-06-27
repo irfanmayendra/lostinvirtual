@@ -1,82 +1,124 @@
-"use client";
+'use client';
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import Head from "next/head";
-import AuthButton from "@/components/AuthButton";
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
+import { useEffect, useState, useCallback } from 'react';
+import Head from 'next/head';
+import AuthButton from '@/components/AuthButton';
+import ActivationForm from '@/components/ActivationForm';
+import CitizenCard from '@/components/CitizenCard';
 
-interface UserInfo {
+interface Citizen {
   id: string;
-  username: string;
-  email: string;
-  displayName: string | null;
-  role: string;
-  avatarUrl: string | null;
-  lastLoginAt: string;
-  stats: {
-    projects: number;
-    deployments: number;
-    auditLogs: number;
-  };
+  citizenNumber: string;
+  region?: { id: string; name: string; countryCode?: string; [key: string]: any } | string | null;
+  regionName?: string;
+  city: string;
+  country: string;
+  countryCode?: string;
+  bio?: string;
+  achievements?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    category?: string;
+    points?: number;
+    earnedAt?: string;
+  }>;
+  activatedAt: string;
+  createdAt?: string;
+  [key: string]: any;
+}
+
+function getRegionName(citizen: Citizen): string {
+  if (citizen.regionName) return citizen.regionName;
+  if (citizen.region && typeof citizen.region === 'object' && 'name' in citizen.region) {
+    return citizen.region.name;
+  }
+  if (typeof citizen.region === 'string') return citizen.region;
+  return '—';
+}
+
+function formatDate(date: string): string {
+  try {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
 }
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [citizen, setCitizen] = useState<Citizen | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-    }
-
-    if (status === "authenticated") {
-      fetchUserInfo();
-    }
-  }, [status]);
-
-  const fetchUserInfo = async () => {
+  const fetchCitizenInfo = useCallback(async () => {
     try {
-      const res = await fetch("/api/user/me");
+      const res = await fetch('/api/citizen/me');
       if (res.ok) {
         const data = await res.json();
-        setUserInfo(data.user);
+        setCitizen(data.citizen);
+      } else if (res.status === 401) {
+        setCitizen(null);
+      } else {
+        setCitizen(null);
       }
-    } catch (error) {
-      console.error("Error fetching user info:", error);
+    } catch (err: any) {
+      console.error('Error fetching citizen info:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  if (status === "loading" || loading) {
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/');
+    }
+    if (status === 'authenticated') {
+      fetchCitizenInfo();
+    }
+  }, [status, router, fetchCitizenInfo]);
+
+  if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-[#08080c] text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin" />
+          <p className="text-sm text-white/30">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
+
+  const regionName = citizen ? getRegionName(citizen) : '—';
+  const totalPoints = citizen?.achievements?.reduce((sum, a) => sum + (a.points || 0), 0) || 0;
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[#08080c] text-white">
       <Head>
         <title>Dashboard | LostInVirtual</title>
       </Head>
 
       {/* Header */}
-      <header className="border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">
-              LostInVirtual
+      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#08080c]/80 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold">
+              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+                LostInVirtual
+              </span>
             </h1>
-            <span className="px-3 py-1 bg-gray-800 rounded-full text-sm text-gray-400">
+            <span className="px-2 py-0.5 text-[11px] font-medium text-white/40 bg-white/[0.04] border border-white/[0.06] rounded-md">
               Dashboard
             </span>
           </div>
@@ -85,95 +127,94 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">
-            Welcome back, {userInfo?.displayName || session.user?.name} 👋
+      <main className="max-w-6xl mx-auto px-6 py-10">
+        {/* Welcome */}
+        <div className="mb-10">
+          <h2 className="text-3xl font-bold mb-1">
+            Welcome back, <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">{session.user?.name || 'Citizen'}</span>
           </h2>
-          <p className="text-gray-400">
-            Here&apos;s what&apos;s happening with your infrastructure.
-          </p>
+          <p className="text-sm text-white/30">Here&apos;s your digital citizenship overview</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-gray-400 text-sm">Role</span>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  userInfo?.role === "ADMIN"
-                    ? "bg-purple-900 text-purple-300"
-                    : "bg-blue-900 text-blue-300"
-                }`}
-              >
-                {userInfo?.role || "VIEWER"}
-              </span>
-            </div>
-            <p className="text-2xl font-bold">{userInfo?.username}</p>
-            <p className="text-gray-500 text-sm mt-1">{userInfo?.email}</p>
+        {/* Error */}
+        {error && (
+          <div className="mb-6 px-4 py-3 bg-red-500/5 border border-red-500/20 rounded-xl text-sm text-red-300">
+            {error}
           </div>
+        )}
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <span className="text-gray-400 text-sm">Projects</span>
-            <p className="text-4xl font-bold mt-2 text-blue-400">
-              {userInfo?.stats.projects || 0}
-            </p>
-            <p className="text-gray-500 text-sm mt-1">Active deployments</p>
-          </div>
+        {citizen ? (
+          <div className="space-y-6">
+            <CitizenCard citizen={citizen} />
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <span className="text-gray-400 text-sm">Deployments</span>
-            <p className="text-4xl font-bold mt-2 text-green-400">
-              {userInfo?.stats.deployments || 0}
-            </p>
-            <p className="text-gray-500 text-sm mt-1">Total deployments</p>
-          </div>
-        </div>
+            {/* Info Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Location Card */}
+              <div className="rounded-xl bg-[#0c0c14] border border-white/[0.06] p-5">
+                <h3 className="text-xs font-medium text-white/30 uppercase tracking-wider mb-4">Location</h3>
+                <div className="space-y-3">
+                  <Row icon="🌍" label="Region" value={regionName} />
+                  <Row icon="🏙️" label="City" value={citizen.city || '—'} />
+                  <Row icon="🇮🇩" label="Country" value={citizen.country || '—'} />
+                </div>
+              </div>
 
-        {/* Quick Actions */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8">
-          <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-all text-sm">
-              🐳 View Containers
-            </button>
-            <button className="px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-all text-sm">
-              🚀 Deploy Service
-            </button>
-            <button className="px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-all text-sm">
-              📊 View Logs
-            </button>
-            <button className="px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-all text-sm">
-              ⚙️ Settings
-            </button>
-          </div>
-        </div>
+              {/* Account Card */}
+              <div className="rounded-xl bg-[#0c0c14] border border-white/[0.06] p-5">
+                <h3 className="text-xs font-medium text-white/30 uppercase tracking-wider mb-4">Account</h3>
+                <div className="space-y-3">
+                  <Row icon="🔑" label="Citizen ID" value={citizen.citizenNumber || '—'} mono />
+                  <Row icon="📅" label="Activated" value={formatDate(citizen.activatedAt)} />
+                  <Row
+                    icon="✅"
+                    label="Status"
+                    value={<span className="text-green-400 font-medium">Active</span>}
+                  />
+                </div>
+              </div>
 
-        {/* Session Info */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Session Info</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Provider</span>
-              <span className="text-green-400">Keycloak OIDC</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Last Login</span>
-              <span>
-                {userInfo?.lastLoginAt
-                  ? new Date(userInfo.lastLoginAt).toLocaleString()
-                  : "N/A"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Audit Logs</span>
-              <span>{userInfo?.stats.auditLogs || 0} events</span>
+              {/* Stats Card */}
+              <div className="rounded-xl bg-[#0c0c14] border border-white/[0.06] p-5">
+                <h3 className="text-xs font-medium text-white/30 uppercase tracking-wider mb-4">Stats</h3>
+                <div className="space-y-3">
+                  <Row icon="🏆" label="Achievements" value={String(citizen.achievements?.length || 0)} />
+                  <Row icon="⭐" label="Total Points" value={String(totalPoints)} />
+                  <Row icon="👤" label="Bio" value={citizen.bio || 'No bio yet'} />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-md mx-auto">
+            <div className="text-center mb-6">
+              <p className="text-sm text-white/30">You haven&apos;t activated your citizenship yet. Enter your token to get started.</p>
+            </div>
+            <ActivationForm onSuccess={fetchCitizenInfo} />
+          </div>
+        )}
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-white/[0.06] mt-20">
+        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+          <span className="text-xs text-white/20">© 2026 LostInVirtual</span>
+          <span className="text-xs text-white/20">Digital Citizenship Platform</span>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function Row({ icon, label, value, mono }: { icon: string; label: string; value: React.ReactNode; mono?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className="text-sm">{icon}</span>
+        <span className="text-xs text-white/40">{label}</span>
+      </div>
+      <span className={`text-sm text-white/80 font-medium ${mono ? 'font-mono' : ''}`}>
+        {value}
+      </span>
     </div>
   );
 }

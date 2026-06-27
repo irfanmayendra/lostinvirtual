@@ -1,4 +1,4 @@
-// LostInVirtual Database Schema
+// LostInVirtual Citizen Registry Database Schema
 // Prisma ORM - PostgreSQL
 
 generator client {
@@ -11,262 +11,139 @@ datasource db {
 }
 
 // ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  ADMIN
+  CITIZEN
+  VISITOR
+}
+
+enum MerchandiseType {
+  TSHIRT
+  HOODIE
+  JACKET
+  CAP
+}
+
+enum TokenStatus {
+  UNUSED
+  ACTIVATED
+  SUSPENDED
+}
+
+// ============================================================
 // CORE TABLES
 // ============================================================
 
 /// Keycloak bridge - local user profiles
 model User {
-  id             String   @id @default(uuid()) @db.Uuid
-  keycloakId     String   @unique @map("keycloak_id")
-  username       String   @unique
-  email          String   @unique
-  displayName    String?  @map("display_name")
-  role           UserRole @default(VIEWER)
-  avatarUrl      String?  @map("avatar_url")
-  preferences    Json?    @default("{}")
-  lastLoginAt    DateTime? @map("last_login_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(uuid()) @db.Uuid
+  keycloakId  String    @unique @map("keycloak_id")
+  username    String    @unique
+  email       String    @unique
+  displayName String?   @map("display_name")
+  role        UserRole  @default(VISITOR)
+  avatarUrl   String?   @map("avatar_url")
+  preferences Json?     @default("{}")
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  projects       Project[]
-  auditLogs      AuditLog[]
-  deployments    Deployment[]
-  backups        Backup[]
-  apiKeys        ApiKey[]
+  citizen Citizen?
+  tokens  Token[]
 
   @@map("users")
 }
 
-enum UserRole {
-  ADMIN
-  EDITOR
-  VIEWER
-}
-
-// ============================================================
-// PROJECT & DEPLOYMENT
-// ============================================================
-
-/// Deployed services/projects
-model Project {
-  id             String        @id @default(uuid()) @db.Uuid
-  name           String
-  slug           String        @unique
-  description    String?
-  repoUrl        String?       @map("repo_url")
-  branch         String        @default("main")
-  deployType     DeployType    @map("deploy_type")
-  containerName  String?       @map("container_name")
-  port           Int?
-  domain         String?
-  status         ProjectStatus @default(STOPPED)
-  healthCheckUrl String?       @map("health_check_url")
-  environment    Environment   @default(DEV)
-  createdBy      String        @map("created_by") @db.Uuid
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+/// Merchandise activation codes
+model Token {
+  id              String          @id @default(uuid()) @db.Uuid
+  code            String          @unique
+  merchandiseType MerchandiseType @map("merchandise_type")
+  batchNumber     String?         @map("batch_number")
+  status          TokenStatus     @default(UNUSED)
+  activatedBy     String?         @map("activated_by") @db.Uuid
+  activatedAt     DateTime?       @map("activated_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
 
   // Relations
-  user           User          @relation(fields: [createdBy], references: [id])
-  deployments    Deployment[]
+  user User? @relation(fields: [activatedBy], references: [id])
 
-  @@index([status])
-  @@index([environment])
-  @@map("projects")
+  @@map("tokens")
 }
 
-enum DeployType {
-  DOCKER
-  STATIC
-  FUNCTION
-}
-
-enum ProjectStatus {
-  RUNNING
-  STOPPED
-  ERROR
-  DEPLOYING
-}
-
-enum Environment {
-  DEV
-  STAGING
-  PROD
-}
-
-/// Deploy history
-model Deployment {
-  id              String         @id @default(uuid()) @db.Uuid
-  projectId       String         @map("project_id") @db.Uuid
-  version         String?
-  commitSha       String?        @map("commit_sha")
-  status          DeployStatus   @default(PENDING)
-  deployedBy      String?        @map("deployed_by") @db.Uuid
-  trigger         DeployTrigger  @default(MANUAL)
-  durationSeconds Int?           @map("duration_seconds")
-  logs            String?
-  createdAt       DateTime       @default(now()) @map("created_at")
-
-  // Relations
-  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user            User?          @relation(fields: [deployedBy], references: [id])
-
-  @@index([projectId])
-  @@index([status])
-  @@map("deployments")
-}
-
-enum DeployStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  ROLLED_BACK
-}
-
-enum DeployTrigger {
-  MANUAL
-  PUSH
-  SCHEDULE
-}
-
-// ============================================================
-// INFRASTRUCTURE
-// ============================================================
-
-/// Container registry for Docker services
-model Service {
-  id               String   @id @default(uuid()) @db.Uuid
-  name             String   @unique
-  containerId      String?  @map("container_id")
-  image            String?
-  version          String?
-  status           String?
-  port             Int?
-  network          String?
-  healthStatus     String   @default("unknown") @map("health_status")
-  lastHealthCheck  DateTime? @map("last_health_check")
-  metadata         Json?    @default("{}")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  @@map("services")
-}
-
-/// Backup registry
-model Backup {
-  id           String       @id @default(uuid()) @db.Uuid
-  type         BackupType
-  status       BackupStatus @default(PENDING)
-  filePath     String?      @map("file_path")
-  fileSizeMb   Float?       @map("file_size_mb")
-  triggeredBy  String?      @map("triggered_by") @db.Uuid
-  createdAt    DateTime     @default(now()) @map("created_at")
-
-  // Relations
-  user         User?        @relation(fields: [triggeredBy], references: [id])
-
-  @@index([type])
-  @@map("backups")
-}
-
-enum BackupType {
-  NPM
-  DATABASE
-  FULL
-}
-
-enum BackupStatus {
-  PENDING
-  RUNNING
-  SUCCESS
-  FAILED
-}
-
-// ============================================================
-// AUDIT & INCIDENTS
-// ============================================================
-
-/// Audit trail for all actions
-model AuditLog {
+/// Activated citizen profile
+model Citizen {
   id            String   @id @default(uuid()) @db.Uuid
-  userId        String?  @map("user_id") @db.Uuid
-  action        Action
-  resourceType  String?  @map("resource_type")
-  resourceId    String?  @map("resource_id")
-  details       Json?    @default("{}")
-  ipAddress     String?  @map("ip_address")
-  userAgent     String?  @map("user_agent")
+  userId        String   @unique @map("user_id") @db.Uuid
+  citizenNumber String   @unique @map("citizen_number")
+  regionId      String?  @map("region_id") @db.Uuid
+  latitude      Float?
+  longitude     Float?
+  city          String?
+  country       String?
+  countryCode   String?  @map("country_code")
+  activatedAt   DateTime @map("activated_at")
+  bio           String?
+  socialLinks   Json?    @map("social_links")
   createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user          User?    @relation(fields: [userId], references: [id])
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  region       Region?              @relation(fields: [regionId], references: [id])
+  achievements CitizenAchievement[]
 
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("audit_logs")
+  @@map("citizens")
 }
 
-enum Action {
-  DEPLOY
-  BACKUP
-  RESTART
-  CONFIG_CHANGE
-  LOGIN
-  LOGOUT
-  CREATE
-  UPDATE
-  DELETE
-}
-
-/// Incident tracking
-model Incident {
-  id                String         @id @default(uuid()) @db.Uuid
-  title             String
-  description       String?
-  severity          IncidentSeverity @default(MEDIUM)
-  status            IncidentStatus  @default(OPEN)
-  affectedServices  Json?          @default("[]") @map("affected_services")
-  resolvedAt        DateTime?      @map("resolved_at")
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
-
-  @@map("incidents")
-}
-
-enum IncidentSeverity {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum IncidentStatus {
-  OPEN
-  INVESTIGATING
-  RESOLVED
-}
-
-// ============================================================
-// API KEYS
-// ============================================================
-
-/// API keys for external integrations
-model ApiKey {
-  id          String    @id @default(uuid()) @db.Uuid
-  userId      String    @map("user_id") @db.Uuid
-  name        String
-  keyHash     String    @unique @map("key_hash")
-  prefix      String    @unique // first 8 chars for identification
-  permissions Json?     @default("[]")
-  lastUsedAt  DateTime? @map("last_used_at")
-  expiresAt   DateTime? @map("expires_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
+/// World map regions
+model Region {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  countryCode  String   @unique @map("country_code")
+  latitude     Float
+  longitude    Float
+  zoomLevel    Int      @default(5) @map("zoom_level")
+  citizenCount Int      @default(0) @map("citizen_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  citizens Citizen[]
 
-  @@index([userId])
-  @@map("api_keys")
+  @@map("regions")
+}
+
+/// Achievement badges
+model Achievement {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String
+  icon        String
+  category    String
+  points      Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  citizens CitizenAchievement[]
+
+  @@map("achievements")
+}
+
+/// Join table for citizen-achievement relationship
+model CitizenAchievement {
+  citizenId     String   @map("citizen_id") @db.Uuid
+  achievementId String   @map("achievement_id") @db.Uuid
+  earnedAt      DateTime @default(now()) @map("earned_at")
+
+  // Relations
+  citizen     Citizen     @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@id([citizenId, achievementId])
+  @@map("citizen_achievements")
 }
