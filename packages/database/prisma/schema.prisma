@@ -15,7 +15,9 @@ datasource db {
 // ============================================================
 
 enum UserRole {
+  SUPERADMIN
   ADMIN
+  MODERATOR
   CITIZEN
   VISITOR
 }
@@ -52,8 +54,10 @@ model User {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  citizen Citizen?
-  tokens  Token[]
+  citizen     Citizen?
+  tokens      Token[]
+  permissions UserPermission[]
+  auditLogs   AuditLog[]
 
   @@map("users")
 }
@@ -146,4 +150,90 @@ model CitizenAchievement {
 
   @@id([citizenId, achievementId])
   @@map("citizen_achievements")
+}
+
+// ============================================================
+// RBAC TABLES
+// ============================================================
+
+/// Role definitions with hierarchy levels
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  level       Int      @unique // 0=VISITOR, 20=CITIZEN, 60=MODERATOR, 80=ADMIN, 100=SUPERADMIN
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+/// Granular permissions (module.action pattern)
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique // e.g. "citizens.read", "tokens.create"
+  module      String // e.g. "citizens", "tokens", "regions", "settings"
+  action      String // e.g. "read", "create", "update", "delete"
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  roles RolePermission[]
+  users UserPermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserPermission {
+  userId       String     @map("user_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+  @@map("user_permissions")
+}
+
+/// CMS - Dynamic page content management
+model PageContent {
+  id        String   @id @default(uuid()) @db.Uuid
+  page      String // "landing", "login", "signup"
+  section   String // "hero", "features", "howItWorks", "cta"
+  key       String // "title", "subtitle", "ctaText", "description"
+  value     String   @db.Text
+  type      String   @default("text") // text, image, json, boolean
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([page, section, key])
+  @@map("page_contents")
+}
+
+/// System audit trail
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  action    String // e.g. "user.promote", "token.revoke"
+  entity    String // e.g. "user", "token", "region"
+  entityId  String?  @map("entity_id")
+  details   Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
 }
