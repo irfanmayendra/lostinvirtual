@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import GradientText from "@/components/ui/GradientText";
 import MotionButton from "@/components/ui/MotionButton";
+import SignupSuccessPopup from "@/components/SignupSuccessPopup";
 
 /* ------------------------------------------------------------------ */
 /* Animation variants                                                  */
@@ -82,6 +83,9 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [regions, setRegions] = useState<Array<{ name: string; countryCode: string; latitude: number; longitude: number; citizenCount: number }>>([]);
+  const [newCitizenNumber, setNewCitizenNumber] = useState<string>("");
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -89,6 +93,14 @@ export default function SignupPage() {
     password: "",
     confirmPassword: "",
   });
+
+  // Fetch regions for the popup map
+  useEffect(() => {
+    fetch("/api/world-map")
+      .then((r) => r.json())
+      .then((data) => setRegions(data.regions || []))
+      .catch(() => {});
+  }, []);
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -134,6 +146,8 @@ export default function SignupPage() {
       }
 
       setSuccess(true);
+      setNewCitizenNumber(data.user?.citizenNumber || "");
+      setShowPopup(true);
     } catch (err: any) {
       setError(err.message || "An error occurred");
     } finally {
@@ -173,19 +187,29 @@ export default function SignupPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </motion.div>
-            <h2 className="text-2xl font-bold mb-2">Account Created</h2>
+            <h2 className="text-2xl font-bold mb-2">Account Created!</h2>
             <p className="text-sm text-gray-400 mb-6">
-              Your account has been created successfully. You can now sign in.
+              Welcome to LostInVirtual, {form.username}. You&apos;re now part of the global citizen network.
             </p>
             <MotionButton
               variant="primary"
               className="w-full py-4 text-base"
               onClick={() => router.push("/login")}
             >
-              Sign In
+              Sign In Now
             </MotionButton>
           </div>
         </motion.div>
+
+        {/* Signup success popup with world map */}
+        <SignupSuccessPopup
+          isOpen={showPopup}
+          onClose={() => setShowPopup(false)}
+          username={form.username}
+          citizenNumber={newCitizenNumber}
+          regions={regions}
+          newCountryCode=""
+        />
       </div>
     );
   }
