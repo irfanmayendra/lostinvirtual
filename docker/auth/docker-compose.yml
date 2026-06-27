@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: password123
     volumes:
-      - ./db_data:/var/lib/postgresql/data
+      - auth_db_data:/var/lib/postgresql/data
     networks:
       - auth_net
     restart: unless-stopped
@@ -23,8 +23,10 @@ services:
       KC_DB_PASSWORD: password123
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: irfan99
-      KC_HOSTNAME: 43.133.55.157
       KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME: https://keycloak.lostinvirtual.world
+      KC_HOSTNAME_ADMIN: https://keycloak.lostinvirtual.world
       KC_PROXY_HEADERS: xforwarded
     ports:
       - "8081:8080"
@@ -34,6 +36,10 @@ services:
       - auth_net
     restart: unless-stopped
 
+volumes:
+  auth_db_data:
+    external: true
+
 networks:
   auth_net:
-    driver: bridge
+    external: true

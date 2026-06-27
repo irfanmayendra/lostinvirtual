@@ -1,11 +1,17 @@
 services:
   web:
     build:
-      context: ./apps/web
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
-      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_URL=${KEYCLOAK_URL:-https://keycloak.lostinvirtual.world}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-lostinvirtual}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-liv-app-dev}
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
-      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER:-https://keycloak.lostinvirtual.world/realms/lostinvirtual}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NODE_ENV=production
     restart: always

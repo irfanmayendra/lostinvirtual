@@ -1,0 +1,119 @@
+###############################################################################
+# LostInVirtual - Infrastructure as Code
+# All core infrastructure services for auth, proxy, and management
+#
+# Usage:
+#   cp .env.example .env   # fill in secrets
+#   docker compose up -d
+#
+# Network: auth_net (shared by all services)
+###############################################################################
+
+networks:
+  auth_net:
+    external: true
+
+volumes:
+  keycloak_db_data:
+    external: true
+  npm_data:
+    external: true
+  npm_letsencrypt:
+    external: true
+  portainer_data:
+    external: true
+
+services:
+  # ──────────────────────────────────────────────────────────────────────────────
+  # PostgreSQL - Keycloak Database
+  # ──────────────────────────────────────────────────────────────────────────────
+  keycloak-db:
+    image: postgres:16
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: ${KC_DB_NAME:-keycloak}
+      POSTGRES_USER: ${KC_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    networks:
+      - auth_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Keycloak - Identity & Access Management
+  # ──────────────────────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KC_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KC_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KC_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME: https://${KC_HOSTNAME:-keycloak.lostinvirtual.world}
+      KC_HOSTNAME_ADMIN: https://${KC_HOSTNAME:-keycloak.lostinvirtual.world}
+      KC_PROXY_HEADERS: xforwarded
+    ports:
+      - "8081:8080"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks:
+      - auth_net
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Nginx Proxy Manager - Reverse Proxy & SSL
+  # ──────────────────────────────────────────────────────────────────────────────
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - auth_net
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Portainer - Docker Management UI
+  # ──────────────────────────────────────────────────────────────────────────────
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - auth_net
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Cloudflare Tunnel - Secure External Access
+  # ──────────────────────────────────────────────────────────────────────────────
+  cloudflare:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN}
+    network_mode: host
+    restart: unless-stopped
