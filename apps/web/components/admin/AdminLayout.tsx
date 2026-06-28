@@ -22,6 +22,7 @@ const MENU_ITEMS: MenuItem[] = [
   { icon: '🌍', label: 'Regions', href: '/admin/regions', minRole: 60 },
   { icon: '📦', label: 'Merchandise', href: '/admin/merchandise', minRole: 80 },
   { icon: '📝', label: 'Content', href: '/admin/content', minRole: 80 },
+  { icon: '📢', label: 'Announcements', href: '/admin/announcements', minRole: 80 },
   { icon: '📈', label: 'Analytics', href: '/admin/analytics', minRole: 80 },
   { icon: '⚙️', label: 'Settings', href: '/admin/settings', minRole: 100 },
   { icon: '📋', label: 'Audit Log', href: '/admin/audit', minRole: 100 },
